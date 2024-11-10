@@ -1,14 +1,14 @@
-import math
 import numpy as np
+import matplotlib.pyplot as plt
 
-pi = math.pi
-v_0 = 100
+pi = np.pi
+v_0 = 300 # 300 cm^3 = 0.3 L
 
 # ---------------------------------------------------------------------------------------
 #                                   LAGRANGIEN
 # ---------------------------------------------------------------------------------------
 
-def lagrangian(r, h, lambd):
+def lagrangien(r, h, lambd):
     return pi**2 * r**2 * (r**2 + h**2) + lambd * (pi/3 * r**2 * h - v_0)
 
 # ---------------------------------------------------------------------------------------
@@ -17,9 +17,12 @@ def lagrangian(r, h, lambd):
 
 def grad_lagrangien(r, h, lambd):
     grad = [0, 0, 0]
-    grad[0] = 4 * r**3 * pi**2 + 2 * pi**2 * h**2 * r - 2 * r * lambd * (pi/3) * h  # Par rapport à r
-    grad[1] = 2 * h * pi**2 * r**2 + (pi/3) * r**2 * lambd  # Par rapport à h
-    grad[2] = (pi/3) * r**2 * h - v_0  # Par rapport à lambda
+    # Par rapport à r
+    grad[0] = 4 * r**3 * pi**2 + 2 * pi**2 * h**2 * r + 2 * r * lambd * (pi/3) * h  
+    # Par rapport à h
+    grad[1] = 2 * h * pi**2 * r**2 + (pi/3) * r**2 * lambd  
+    # Par rapport à lambda
+    grad[2] = (pi/3) * r**2 * h - v_0  
     return grad
 
 # ---------------------------------------------------------------------------------------
@@ -27,13 +30,13 @@ def grad_lagrangien(r, h, lambd):
 # ---------------------------------------------------------------------------------------
 
 def norme(grad):
-    return math.sqrt(grad[0]**2 + grad[1]**2 + grad[2]**2)
+    return np.sqrt(grad[0]**2 + grad[1]**2 + grad[2]**2)
 
 # ---------------------------------------------------------------------------------------
 #                               GRADIENT À PAS FIXE
 # ---------------------------------------------------------------------------------------
 
-def gradient_pas_fixe(x_0, pas, tolerance, max_iterations):
+def gradient_pas_fixe(x_0, pas, tolerance, it_max):
     """
     Méthode du gradient à pas fixe pour minimiser le Lagrangien
     
@@ -41,11 +44,11 @@ def gradient_pas_fixe(x_0, pas, tolerance, max_iterations):
         x_0: Point initial (r_0, h_0, lambda_0)
         pas: Taille du pas fixe (alpha)
         tolerance: Critère d'arrêt pour la norme du gradient
-        max_iterations: Nombre maximum d'itérations
+        it_max: Nombre maximum d'itérations
     
     Returns:
         x: Solution optimale trouvée (r*, h*, lambda*)
-        iterations: Nombre d'itérations effectuées
+        it: Nombre d'itérations effectuées
         historique: Liste des points visités et des normes du gradient
     """
 
@@ -54,29 +57,32 @@ def gradient_pas_fixe(x_0, pas, tolerance, max_iterations):
     gradX = grad_lagrangien(x[0], x[1], x[2])
     historique = {'points': [x_0.copy()], 'normes': [norme(gradX)]}
 
-    iterations = 0
+    it = 0
     
-    while norme(gradX) > tolerance and iterations < max_iterations:
+    while norme(gradX) > tolerance and it < it_max:
         # Mise à jour: x_{k+1} = x_k - alpha * gradient
+        # Si dérivée > 0, x avance. Sinon, x recule.
+        # Le pas est toujours positif.
         x[0] = x[0] - pas * gradX[0]
         x[1] = x[1] - pas * gradX[1]
         x[2] = x[2] - pas * gradX[2]
 
         # Direction de descente d_k = -gradient
-        gradX = grad_lagrangien(-x[0], -x[1], -x[2])
+        gradX = grad_lagrangien(x[0], x[1], x[2])
         
-        iterations += 1
+        it += 1
         # Stocker une copie du point courant
-        historique['points'].append(x)
+        historique['points'].append(x.copy())
         historique['normes'].append(norme(gradX))
     
-    return x, iterations, historique
+    return x, it, historique
+
 
 # ---------------------------------------------------------------------------------------
 #                               RECHERCHE LINÉAIRE
 # ---------------------------------------------------------------------------------------
 
-def recherche_lineaire(x, p, c1=0.0001, rho=0.5):
+def recherche_lineaire(x, d_k, c1=0.5, rho=0.5):
     """
     Recherche linéaire avec règle d'Armijo (backtracking)
     
@@ -89,22 +95,26 @@ def recherche_lineaire(x, p, c1=0.0001, rho=0.5):
     Returns:
         alpha: Pas acceptable
     """
-    alpha = 1.0  # Commencer avec un pas unitaire
+    alpha = 0.001  # pas initial
     
     # Valeur et gradient au point courant
-    f_k = lagrangian(*x)
+    lag_k = lagrangien(*x)
     grad_k = grad_lagrangien(*x)
     
     # Produit scalaire grad_k^T * p
-    direction_derivee = sum(g * d for g, d in zip(grad_k, p))
+    PS_k = grad_k[0] * d_k[0] + grad_k[1] * d_k[1] + grad_k[2] * d_k[2]
     
     while True:
-        # Nouveau point candidat
-        x_new = [x[i] + alpha * p[i] for i in range(3)]
-        f_new = lagrangian(*x_new)
+        x_k1 = [
+            x[0] + alpha * d_k[0], 
+            x[1] + alpha * d_k[1], 
+            x[2] + alpha * d_k[2]
+        ]
+
+        lag_k1 = lagrangien(x_k1[0], x_k1[1], x_k1[2])
         
         # Condition d'Armijo
-        if f_new <= f_k + c1 * alpha * direction_derivee:
+        if lag_k1 <= lag_k + c1 * alpha * PS_k:
             break
         
         # Réduire le pas
@@ -116,110 +126,147 @@ def recherche_lineaire(x, p, c1=0.0001, rho=0.5):
     
     return alpha
 
+
 # ---------------------------------------------------------------------------------------
 #                               GRADIENT À PAS OPTIMAL
 # ---------------------------------------------------------------------------------------
 
-def gradient_pas_optimal(x_0, tolerance, max_iterations):
+def gradient_pas_optimal(x_0, tolerance, it_max):
     """
-    Méthode du gradient à pas optimal avec recherche linéaire d'Armijo:
-    1. k = 0, choisir x_0
-    2. Calculer direction de descente d_k = -grad_lagrangien(x_k)
-    3. Trouver le pas optimal alpha_k par recherche linéaire (règle d'Armijo)
-    4. X_{k+1} = X_k - alpha_k * d_k
-    5. Si norme(d_k) <= tolerance: STOP, sinon k = k+1 et retour à 2.
+    Méthode du gradient à pas optimal avec recherche linéaire d'Armijo
+    
+    Args:
+        x_0: Point initial (r_0, h_0, lambda_0)
+        tolerance: Critère d'arrêt pour la norme du gradient
+        it_max: Nombre maximum d'itérations
+    
+    Returns:
+        x: Solution optimale trouvée (r*, h*, lambda*)
+        it: Nombre d'itérations effectuées
+        historique: Historique des points visités et des normes du gradient
     """
 
     # Point initial
     x = x_0.copy()
     gradX = grad_lagrangien(x[0], x[1], x[2])
     historique = {'points': [x_0.copy()], 'normes': [norme(gradX)]}
-    iterations = 0
+    it = 0
     
-    while norme(gradX) > tolerance and iterations < max_iterations:
+    while norme(gradX) > tolerance and it < it_max:
         # Direction de descente d_k = -gradient
-        gradX = grad_lagrangien(-x[0], -x[1], -x[2])
-
+        direction = [-g for g in gradX]  # Create negative gradient direction
+        
         # Recherche du pas optimal
-        pas = recherche_lineaire(x, gradX)
+        pas = recherche_lineaire(x, direction)
         
         # Mise à jour
         x[0] = x[0] - pas * gradX[0]
         x[1] = x[1] - pas * gradX[1]
         x[2] = x[2] - pas * gradX[2]
         
-        iterations += 1
-        historique['points'].append(x)
+        # Direction de descente d_k = -gradient
+        gradX = grad_lagrangien(x[0], x[1], x[2])
+
+        it += 1
+        historique['points'].append(x.copy())
         historique['normes'].append(norme(gradX))
     
-    return x, iterations, historique
+    return x, it, historique
 
 
 # ---------------------------------------------------------------------------------------
 #                                      WOLFE
 # ---------------------------------------------------------------------------------------
 
-def wolfe(x_k, d_k, max_iterations):
+def wolfe(x_k, d_k, it_max, c1=0.5, c2=0.9):
+    """
+    Recherche linéaire avec conditions de Wolfe
+    
+    Args:
+        x_k: Point courant (r, h, lambda)
+        d_k: Direction de descente
+        it_max: Nombre maximum d'itérations
+        c1: Premier paramètre de Wolfe (condition d'Armijo) (entre 0 et 1)
+        c2: Second paramètre de Wolfe (condition de courbure) (entre c1 et 1)
+    
+    Returns:
+        a_k: Pas optimal trouvé
+        x_k1: Nouveau point optimal
+        it: Nombre d'itérations effectuées
+        historique: Historique des points et des normes du gradient
+    """
+
     cond1 = 0
     cond2 = 0
 
+    x_k1 = [0, 0, 0]
+
     gradX_k = grad_lagrangien(x_k[0], x_k[1], x_k[2])
-    lagX_k = lagrangian(x_k[0], x_k[1], x_k[2])
+    lagX_k = lagrangien(x_k[0], x_k[1], x_k[2])
 
-    Psk = d_k[0] * gradX_k[0] + d_k[1] * gradX_k[1] + d_k[2] * gradX_k[2]
+    # Calcul du produit scalaire initial
+    PS_k = d_k[0]*gradX_k[0] + d_k[1]*gradX_k[1] + d_k[2]*gradX_k[2]
 
-    alpha_min = 0
-    alpha_max = 100
-    alpha_k = (alpha_min + alpha_max) / 2
+    a_min = 0
+    a_max = 100
+    a_k = (a_min + a_max) / 2
 
-    iterations = 0
+    it = 0
+    historique = {'points': [x_k.copy()], 'normes': [norme(gradX_k)]}
 
-    while ((cond1 + cond2) < 3) and (iterations < max_iterations):
-        x_k[0] = x_k[0] + alpha_k * d_k[0]
-        x_k[1] = x_k[1] + alpha_k * d_k[1]
-        x_k[2] = x_k[2] + alpha_k * d_k[2]
+    while ((cond1 + cond2) < 2) and (it < it_max):
+        # Calcul du nouveau point
+        x_k1 = [x + a_k * d for x, d in zip(x_k, d_k)]
 
-        gradX_k = grad_lagrangien(x_k[0], x_k[1], x_k[2])
+        lagX_k1 = lagrangien(x_k1[0], x_k1[1], x_k1[2])
 
-        Psk = d_k[0] * gradX_k[0] + d_k[1] * gradX_k[1] + d_k[2] * gradX_k[2]
+        gradX_k1 = grad_lagrangien(x_k1[0], x_k1[1], x_k1[2])
 
-        if lagX_k > (lagX_k + cond1 * alpha_k * Psk):
+        # Calcul du nouveau produit scalaire
+        PS_k1 = d_k[0]*gradX_k1[0] + d_k[1]*gradX_k1[1] + d_k[2]*gradX_k1[2]
+
+        if lagX_k1 > (lagX_k + c1 * a_k * PS_k):
             cond1 = 0
-            alpha_max = alpha_k
-            alpha_k = (alpha_min + alpha_max) / 2
+            a_max = a_k
         else:
             cond1 = 1
-        
-        if (-Psk > -cond2 * Psk):
+
+        if -PS_k1 > -c2 * PS_k:
             cond2 = 0
-            alpha_min = alpha_k
-            alpha_k = (alpha_min + alpha_max) / 2
+            a_min = a_k
         else:
             cond2 = 1
+            
+        a_k = (a_min + a_max) / 2
         
-    return x_k, iterations
+        it += 1
+        historique['points'].append(x_k1.copy())
+        historique['normes'].append(norme(gradX_k1))
+    
+    return a_k, x_k1, it, historique
+
 
 # ---------------------------------------------------------------------------------------
 #                                      TESTS
 # ---------------------------------------------------------------------------------------
 
 def test_gradient_pas_fixe():
-    x_0 = [1, 1, 1]  # (r_0, h_0, lambda_0)
-    pas = 1e-5
-    tolerance = 1e-3
-    max_iterations = 1000
+    x_0 = [4.5, 12, 1]  # (r_0, h_0, lambda_0)
+    pas = 0.00001
+    tolerance = 0.001
+    it_max = 1000
     
-    solution, nb_iterations, historique = gradient_pas_fixe(x_0, pas, tolerance, max_iterations)
+    solution, nb_iterations, historique = gradient_pas_fixe(x_0, pas, tolerance, it_max)
     
-    print("\nRésultats de l'optimisation:")
-    print("-" * 50)
+    print("\nRésultats de l'optimisation (Pas Fixe):")
+    print("-" * 90)
     print(f"Point initial (r₀, h₀, λ₀) = ({x_0[0]:.6f}, {x_0[1]:.6f}, {x_0[2]:.6f})")
     print(f"Point final (r*, h*, λ*) = ({solution[0]:.6f}, {solution[1]:.6f}, {solution[2]:.6f})")
     print(f"Nombre d'itérations: {nb_iterations}")
     print(f"Norme finale du gradient: {historique['normes'][-1]:.8f}")
     
     print("\nHistorique de convergence:")
-    print("-" * 50)
+    print("-" * 90)
 
     steps_to_show = [0, nb_iterations//4, nb_iterations//2, 3*nb_iterations//4, nb_iterations-1]
 
@@ -227,31 +274,58 @@ def test_gradient_pas_fixe():
         point = historique['points'][i]
         norm = historique['normes'][i]
         print(f"Iteration {i:4d}: (r, h, λ) = ({point[0]:10.6f}, {point[1]:10.6f}, {point[2]:10.6f}), |∇L| = {norm:.8f}")
+
     
 def test_gradient_pas_optimal():
-    x_0 = [1, 1, 1]  # (r_0, h_0, lambda_0)
-    tolerance = 1e-3
-    max_iterations = 1000
+    x_0 = [5, 7, 1]  # (r_0, h_0, lambda_0)
+    tolerance = 0.0001
+    it_max = 1000
     
-    solution, nb_iterations, historique = gradient_pas_optimal(x_0, tolerance, max_iterations)
+    solution, nb_iterations, historique = gradient_pas_optimal(x_0, tolerance, it_max)
     
     print("\nRésultats de l'optimisation (Pas Optimal):")
-    print("-" * 50)
+    print("-" * 90)
     print(f"Point initial (r₀, h₀, λ₀) = ({x_0[0]:.6f}, {x_0[1]:.6f}, {x_0[2]:.6f})")
     print(f"Point final (r*, h*, λ*) = ({solution[0]:.6f}, {solution[1]:.6f}, {solution[2]:.6f})")
     print(f"Nombre d'itérations: {nb_iterations}")
     print(f"Norme finale du gradient: {historique['normes'][-1]:.8f}")
     
     print("\nHistorique de convergence:")
-    print("-" * 50)
+    print("-" * 90)
     steps_to_show = [0, nb_iterations//4, nb_iterations//2, 3*nb_iterations//4, nb_iterations-1]
     
     for i in steps_to_show:
         point = historique['points'][i]
         norm = historique['normes'][i]
         print(f"Iteration {i:4d}: (r, h, λ) = ({point[0]:10.6f}, {point[1]:10.6f}, {point[2]:10.6f}), |∇L| = {norm:.8f}")
+
+
+def test_wolfe():
+    x_0 = [4.5, 12, 1]  # (r_0, h_0, lambda_0)
+    d_k = [-1, -1, -1]  # direction de descente
+    it_max = 1000
+    
+    a_k, solution, nb_iterations, historique = wolfe(x_0, d_k, it_max)
+    
+    print("\nRésultats de l'optimisation (Wolfe):")
+    print("-" * 90)
+    print(f"Point initial (r₀, h₀, λ₀) = ({x_0[0]:.6f}, {x_0[1]:.6f}, {x_0[2]:.6f})")
+    print(f"Point final (r*, h*, λ*) = ({solution[0]:.6f}, {solution[1]:.6f}, {solution[2]:.6f})")
+    print(f"Pas optimal (α*) = {a_k:.6f}")
+    print(f"Nombre d'itérations: {nb_iterations}")
+    print(f"Norme finale du gradient: {historique['normes'][-1]:.8f}")
+    
+    print("\nHistorique de convergence:")
+    print("-" * 90)
+    steps_to_show = [0, nb_iterations//4, nb_iterations//2, 3*nb_iterations//4, nb_iterations-1]
+    
+    for i in steps_to_show:
+        point = historique['points'][i]
+        norm = historique['normes'][i]
+        print(f"Iteration {i:4d}: (r, h, λ) = ({point[0]:10.6f}, {point[1]:10.6f}, {point[2]:10.6f}), |∇L| = {norm:.8f}")
+
 
 if __name__ == "__main__":
     test_gradient_pas_fixe()
     test_gradient_pas_optimal()
-
+    test_wolfe()
