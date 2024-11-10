@@ -33,6 +33,37 @@ def norme(grad):
     return np.sqrt(grad[0]**2 + grad[1]**2 + grad[2]**2)
 
 # ---------------------------------------------------------------------------------------
+#                                      HESSIENNE
+# ---------------------------------------------------------------------------------------
+
+def hessienne(r, h, lambd):
+    """
+    Calcule la matrice hessienne du Lagrangien
+    """
+    H = np.zeros((3, 3))
+    
+    # Dérivées secondes par rapport à r
+    H[0,0] = 12 * r**2 * pi**2 + 2 * pi**2 * h**2 + 2 * lambd * (pi/3) * h
+    
+    # Dérivées croisées r,h
+    H[0,1] = H[1,0] = 4 * pi**2 * r * h + 2 * r * lambd * (pi/3)
+    
+    # Dérivées croisées r,lambda
+    H[0,2] = H[2,0] = 2 * r * (pi/3) * h
+    
+    # Dérivées secondes par rapport à h
+    H[1,1] = 2 * pi**2 * r**2
+    
+    # Dérivées croisées h,lambda
+    H[1,2] = H[2,1] = (pi/3) * r**2
+    
+    # Dérivées secondes par rapport à lambda
+    H[2,2] = 0
+    
+    return H
+
+
+# ---------------------------------------------------------------------------------------
 #                               GRADIENT À PAS FIXE
 # ---------------------------------------------------------------------------------------
 
@@ -247,6 +278,56 @@ def wolfe(x_k, d_k, it_max, c1=0.5, c2=0.9):
 
 
 # ---------------------------------------------------------------------------------------
+#                                      NEWTON
+# ---------------------------------------------------------------------------------------
+
+def newton(x_0, tolerance, it_max):
+    """
+    Méthode de Newton pour minimiser le Lagrangien
+    
+    Args:
+        x_0: Point initial (r_0, h_0, lambda_0)
+        tolerance: Critère d'arrêt pour la norme du gradient
+        it_max: Nombre maximum d'itérations
+    
+    Returns:
+        x: Solution optimale trouvée (r*, h*, lambda*)
+        it: Nombre d'itérations effectuées
+        historique: Historique des points visités et des normes du gradient
+    """
+    # Point initial
+    x = x_0.copy()
+    gradX = grad_lagrangien(x[0], x[1], x[2])
+    historique = {'points': [x_0.copy()], 'normes': [norme(gradX)]}
+    
+    it = 0
+    
+    while norme(gradX) > tolerance and it < it_max:
+        # Calcul de la hessienne
+        H = hessienne(x[0], x[1], x[2])
+        
+        # Convertir le gradient en array numpy et le rendre négatif
+        minus_grad = -np.array(gradX)
+
+        # Résoudre le système H * d = -grad pour trouver la direction d
+        # C'est comme résoudre l'équation H * d = -grad
+        direction = np.linalg.solve(H, minus_grad)
+
+        # Mise à jour: x_{k+1} = x_k + d
+        x[0] = x[0] + direction[0]
+        x[1] = x[1] + direction[1]
+        x[2] = x[2] + direction[2]
+        
+        # Nouveau gradient
+        gradX = grad_lagrangien(x[0], x[1], x[2])
+        
+        it += 1
+        historique['points'].append(x.copy())
+        historique['normes'].append(norme(gradX))
+            
+    return x, it, historique
+
+# ---------------------------------------------------------------------------------------
 #                                      TESTS
 # ---------------------------------------------------------------------------------------
 
@@ -325,7 +406,32 @@ def test_wolfe():
         print(f"Iteration {i:4d}: (r, h, λ) = ({point[0]:10.6f}, {point[1]:10.6f}, {point[2]:10.6f}), |∇L| = {norm:.8f}")
 
 
+def test_newton():
+    x_0 = [4.5, 12, 1]  # (r_0, h_0, lambda_0)
+    tolerance = 0.0001
+    it_max = 1000
+    
+    solution, nb_iterations, historique = newton(x_0, tolerance, it_max)
+    
+    print("\nRésultats de l'optimisation (Newton):")
+    print("-" * 90)
+    print(f"Point initial (r₀, h₀, λ₀) = ({x_0[0]:.6f}, {x_0[1]:.6f}, {x_0[2]:.6f})")
+    print(f"Point final (r*, h*, λ*) = ({solution[0]:.6f}, {solution[1]:.6f}, {solution[2]:.6f})")
+    print(f"Nombre d'itérations: {nb_iterations}")
+    print(f"Norme finale du gradient: {historique['normes'][-1]:.8f}")
+    
+    print("\nHistorique de convergence:")
+    print("-" * 90)
+    steps_to_show = [0, nb_iterations//4, nb_iterations//2, 3*nb_iterations//4, nb_iterations-1]
+    
+    for i in steps_to_show:
+        point = historique['points'][i]
+        norm = historique['normes'][i]
+        print(f"Iteration {i:4d}: (r, h, λ) = ({point[0]:10.6f}, {point[1]:10.6f}, {point[2]:10.6f}), |∇L| = {norm:.8f}")
+
+
 if __name__ == "__main__":
     test_gradient_pas_fixe()
     test_gradient_pas_optimal()
     test_wolfe()
+    test_newton()
