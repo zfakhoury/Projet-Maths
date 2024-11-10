@@ -187,10 +187,10 @@ int main() {
 	dk[1] = 1;
 	dk[2] = 1;
 	
-	// GradPasFixe(x0, 0.001, 0.001);
+	GradPasFixe(x0, 0.001, 0.001);
 	// GradPasOptimal(x0, 1, 0.001);
 
-	Wolfe(x0, dk);
+	// Wolfe(x0, dk);
 	return 0;
 }
 
