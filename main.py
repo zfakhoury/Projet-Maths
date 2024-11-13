@@ -367,7 +367,7 @@ def wolfe(x_k, d_k, it_max, c1=0.3, c2=0.6):
         a_k = (a_min + a_max) / 2
         
         it += 1
-        historique['points'].append(x_k1.copy())``
+        historique['points'].append(x_k1.copy())
         historique['normes'].append(norme(gradX_k1))
     
     return a_k, x_k1, it, historique
