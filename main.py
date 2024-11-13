@@ -196,8 +196,8 @@ def gradient_pas_optimal(x_0, tolerance, it_max):
         # Direction de descente d_k = -gradient
         direction = [-gradX[0], -gradX[1], -gradX[2]]
         
-        # Recherche du pas optimal par la méthode d'Armijo
-        pas = recherche_lineaire(x, direction)
+        # Recherch
+        pas = wolfe(x, direction, 100, c1=0.01, c2=0.99)
         
         # Mise à jour: x_{k+1} = x_k + alpha * d_k
         x[0] = x[0] + pas * direction[0]
@@ -305,7 +305,7 @@ def quasi_newton(x_0, tolerance, it_max):
 #                                      WOLFE
 # ---------------------------------------------------------------------------------------
 
-def wolfe(x_k, d_k, it_max, c1=0.3, c2=0.6):
+def wolfe(x_k, d_k, it_max, c1=0.01, c2=0.99):
     """
     Recherche linéaire avec conditions de Wolfe
     
@@ -336,14 +336,18 @@ def wolfe(x_k, d_k, it_max, c1=0.3, c2=0.6):
 
     a_min = 0
     a_max = 100
-    a_k = (a_min + a_max) / 2
+
+    # a_k = (a_min + a_max) / 2
+    a_k = 1e-6
 
     it = 0
     historique = {'points': [x_k.copy()], 'normes': [norme(gradX_k)]}
 
     while ((cond1 + cond2) < 2) and (it < it_max):
         # Calcul du nouveau point
-        x_k1 = [x + a_k * d for x, d in zip(x_k, d_k)]
+        x_k1[0] = x_k[0] + a_k * d_k[0]
+        x_k1[1] = x_k[1] + a_k * d_k[1]
+        x_k1[2] = x_k[2] + a_k * d_k[2]
 
         lagX_k1 = lagrangien(x_k1[0], x_k1[1], x_k1[2])
 
@@ -355,22 +359,26 @@ def wolfe(x_k, d_k, it_max, c1=0.3, c2=0.6):
         if lagX_k1 > (lagX_k + c1 * a_k * PS_k):
             cond1 = 0
             a_max = a_k
+            a_k = (a_min + a_max) / 2
         else:
             cond1 = 1
 
         if -PS_k1 > -c2 * PS_k:
             cond2 = 0
-            a_min = a_k
+            if a_max < 100:
+                a_min = a_k
+                a_k = (a_min + a_max) / 2
+            else:
+                a_k = a_k * 2
         else:
             cond2 = 1
             
-        a_k = (a_min + a_max) / 2
-        
+        print(a_k)
         it += 1
         historique['points'].append(x_k1.copy())
         historique['normes'].append(norme(gradX_k1))
     
-    return a_k, x_k1, it, historique
+    return a_k
 
 
 # ---------------------------------------------------------------------------------------
@@ -530,9 +538,9 @@ def test_gradient_pas_fixe():
 
 
 def test_gradient_pas_optimal():
-    x_0 = [5, 10, 1]  # (r_0, h_0, lambda_0)
+    x_0 = [20, 10, 1]  # (r_0, h_0, lambda_0)
     tolerance = 0.1
-    it_max = 1000
+    it_max = 10000
     
     solution, nb_iterations, historique = gradient_pas_optimal(x_0, tolerance, it_max)
     
@@ -636,8 +644,8 @@ def test_bfgs():
 
 
 if __name__ == "__main__":
-    test_gradient_pas_fixe()
+    # test_gradient_pas_fixe()
     test_gradient_pas_optimal()
-    test_wolfe()
-    test_newton()
-    test_bfgs()
+    # test_wolfe()
+    # test_newton()
+    # test_bfgs()
