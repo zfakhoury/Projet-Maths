@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 
 pi = np.pi
 v_0 = 300 # 300 cm^3 = 0.3 L (contrainte de volume modifiable)
@@ -8,7 +9,7 @@ v_0 = 300 # 300 cm^3 = 0.3 L (contrainte de volume modifiable)
 #                                      SURFACE
 # ---------------------------------------------------------------------------------------
 
-def surface(r, h):
+def surface_au_carre(r, h):
     """
     Calcule la surface latérale du cône.
     
@@ -54,7 +55,7 @@ def lagrangien(r, h, lambd):
     Returns:
         float: Valeur du Lagrangien
     """
-    return surface(r, h) + lambd * (volume(r, h) - v_0)
+    return surface_au_carre(r, h) + lambd * (volume(r, h) - v_0)
 
 # ---------------------------------------------------------------------------------------
 #                              GRADIENT DU LAGRANGIEN
@@ -450,27 +451,38 @@ def plot_optimization_results(historique, method_name):
     """
 
     # Calculer les valeurs de surface et de volume pour chaque point
-    surface_values = [surface(point[0], point[1]) for point in historique['points']]
+    surface_values = [np.sqrt(surface_au_carre(point[0], point[1])) for point in historique['points']]
     volume_values = [volume(point[0], point[1]) for point in historique['points']]
     
     # Point initial (donné en paramètres) et point final (solution retournée par la méthode choisie)
     initial_point = historique['points'][0]
     final_point = historique['points'][-1]
     
-    # Créer deux sous-graphiques
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 10))
+    # Taille de la fenêtre en pouces
+    fig = plt.figure(figsize=(14, 8))
     
-    # Créer des valeurs entières pour l'axe x 
-    # (pour n'afficher que des entiers sur l'axe des itérations)
+    # Créer les sous-graphiques
+    ax1 = plt.subplot2grid((2, 2), (0, 0))  # Placement gauche haut pour la surface
+    ax2 = plt.subplot2grid((2, 2), (0, 1))  # Placement droite haut pour le volume
+    ax3 = plt.subplot2grid((2, 2), (1, 0), colspan=2, projection='3d')  # Placement bas pour le cône
+    
     iterations = list(range(len(surface_values)))
     
-    # Graphique de l'évolution de la surface en fonction du nombre d'itérations
+    # Graphique de la surface
     ax1.plot(iterations, surface_values, 'b-', linewidth=2)
-    ax1.scatter(iterations, surface_values, color='red', s=30)
-    ax1.set_title(f"Évolution de la surface pendant l'optimisation ({method_name})")
+    ax1.set_title(f"Surface en fonction du nombre d'itérations ({method_name})")
     ax1.set_xlabel("Itération")
     ax1.set_ylabel("Surface")
     ax1.grid(True)
+    
+    # Volume plot
+    ax2.plot(iterations, volume_values, 'g-', linewidth=2)
+    ax2.axhline(y=v_0, color='r', linestyle='--', label=f'Contrainte v_0 = {v_0}')
+    ax2.set_title(f"Volume en fonction du nombre d'itérations ({method_name})")
+    ax2.set_xlabel("Itération")
+    ax2.set_ylabel("Volume")
+    ax2.grid(True)
+    ax2.legend()
     
     # Annotations pour le graphique de la surface
     # Point initial
@@ -493,16 +505,6 @@ def plot_optimization_results(historique, method_name):
                 bbox=dict(boxstyle='round,pad=0.5', fc='yellow', alpha=0.5),
                 arrowprops=dict(arrowstyle='->', connectionstyle='arc3,rad=0'))
     
-    # Graphique de l'évolution du volume en fonction du nombre d'itérations
-    ax2.plot(iterations, volume_values, 'g-', linewidth=2)
-    ax2.scatter(iterations, volume_values, color='red', s=30)
-    ax2.axhline(y=v_0, color='r', linestyle='--', label=f'Contrainte v_0 = {v_0}')
-    ax2.set_title(f"Évolution du volume pendant l'optimisation ({method_name})")
-    ax2.set_xlabel("Itération")
-    ax2.set_ylabel("Volume")
-    ax2.grid(True)
-    ax2.legend()
-    
     # Annotations pour le graphique du volume
     # Point initial
     ax2.annotate(f'Initial:\nV = {volume_values[0]:.2f}\nr = {initial_point[0]:.2f}\nh = {initial_point[1]:.2f}', 
@@ -524,9 +526,59 @@ def plot_optimization_results(historique, method_name):
                 bbox=dict(boxstyle='round,pad=0.5', fc='yellow', alpha=0.5),
                 arrowprops=dict(arrowstyle='->', connectionstyle='arc3,rad=0'))
     
+    # Ajouter la visualisation 3D du cône final
+    final_point = historique['points'][-1]
+    r, h = final_point[0], final_point[1]
+    
+    # Générer les points pour le cône
+    theta = np.linspace(0, 2*np.pi, 100)
+    z = np.linspace(0, h, 100)
+    Theta, Z = np.meshgrid(theta, z)
+    R = r * (1 - Z/h)
+    X = R * np.cos(Theta)
+    Y = R * np.sin(Theta)
+    
+    # Tracer le cône
+    surf = ax3.plot_surface(X, Y, Z, alpha=0.5, cmap='viridis') # type: ignore
+    ax3.set_title(f'Cône optimal\n(r={r:.2f}, h={h:.2f})')
+    
+    # Afficher l'ensemble des graphiques
     plt.tight_layout()
     plt.show()
 
+# ---------------------------------------------------------------------------------------
+#                              COMPARAISON DES MÉTHODES
+# ---------------------------------------------------------------------------------------
+
+def compare_methods():
+    """Fonction pour comparer les performances des différentes méthodes d'optimisation."""
+    x_0 = [10, 10, 1]
+    methods = {
+        'Gradient (pas fixe)': lambda: gradient_pas_fixe(x_0, 1E-7, 0.1, 2000),
+        'Gradient (pas optimal)': lambda: gradient_pas_optimal(x_0, 0.1, 10000),
+        'Newton': lambda: newton(x_0, 0.0001, 1000),
+        'Quasi-Newton': lambda: quasi_newton(x_0, 0.0001, 500)
+    }
+    
+    results = {}
+    for name, method in methods.items():
+        solution, iterations, historique = method()
+        results[name] = {
+            'solution': solution,
+            'iterations': iterations,
+        }
+    
+    # Afficher les résultats dans un tableau
+    print("\nComparaison des méthodes:")
+    print("-" * 90)
+    print(f"{'Méthode':<30} {'Iterations':>15} {'Surface finale':>20} {'Volume final':>20}")
+    print("-" * 90)
+    
+    for name, result in results.items():
+        s = surface_au_carre(result['solution'][0], result['solution'][1])
+        v = volume(result['solution'][0], result['solution'][1])
+        print(f"{name:<30} {result['iterations']:>15d} {s:>20.2f} {v:>20.2f}")
+    
 
 # ---------------------------------------------------------------------------------------
 #                                      TESTS
@@ -646,4 +698,5 @@ if __name__ == "__main__":
     test_gradient_pas_optimal()
     test_newton()
     test_quasi_newton()
+    compare_methods()
     
