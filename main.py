@@ -642,7 +642,7 @@ def test_quasi_newton():
 # ---------------------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    # test_gradient_pas_fixe()
+    test_gradient_pas_fixe()
     test_gradient_pas_optimal()
     test_newton()
     test_quasi_newton()
