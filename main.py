@@ -562,7 +562,7 @@ def test_gradient_pas_fixe():
 def test_gradient_pas_optimal():
     x_0 = [10, 10, 1]  # (r_0, h_0, lambda_0)
     tolerance = 0.1
-    it_max = 1000
+    it_max = 10000
     
     solution, nb_iterations, historique = gradient_pas_optimal(x_0, tolerance, it_max)
     
@@ -642,7 +642,7 @@ def test_quasi_newton():
 # ---------------------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    test_gradient_pas_fixe()
+    # test_gradient_pas_fixe()
     test_gradient_pas_optimal()
     test_newton()
     test_quasi_newton()
