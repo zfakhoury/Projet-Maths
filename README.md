@@ -45,19 +45,19 @@ Le programme va :
 
 - Utilise un pas constant pour la descente
 - Plus simple mais convergence plus lente
-- Paramètres par défaut : `pas=1E-7`, `tolerance=0.1`, `it_max=2000`
+- Paramètres par défaut : `pas=1E-7`, `tolerance=0.001`, `it_max=2000`
 
 ### Gradient à pas optimal
 
-- Utilise la recherche linéaire de Wolfe pour déterminer le pas optimal
+- Utilise la recherche linéaire par la règle de Wolfe pour déterminer le pas optimal
 - Meilleure convergence que le pas fixe
-- Paramètres par défaut : `tolerance=0.1`, `it_max=10000`
+- Paramètres par défaut : `tolerance=0.001`, `it_max=1000`
 
 ### Newton
 
 - Utilise la matrice hessienne pour une convergence quadratique
 - Convergence rapide mais calculs plus complexes
-- Paramètres par défaut : `tolerance=0.0001`, `it_max=1000`
+- Paramètres par défaut : `tolerance=0.001`, `it_max=100`
 
 ### Quasi-Newton (BFGS)
 

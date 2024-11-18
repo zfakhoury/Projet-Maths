@@ -587,7 +587,7 @@ def compare_methods():
 def test_gradient_pas_fixe():
     x_0 = [10, 10, 1]  # (r_0, h_0, lambda_0)
     pas = 1E-7
-    tolerance = 0.1
+    tolerance = 0.001
     it_max = 2000
     
     solution, nb_iterations, historique = gradient_pas_fixe(x_0, pas, tolerance, it_max)
@@ -613,8 +613,8 @@ def test_gradient_pas_fixe():
 
 def test_gradient_pas_optimal():
     x_0 = [10, 10, 1]  # (r_0, h_0, lambda_0)
-    tolerance = 0.1
-    it_max = 10000
+    tolerance = 0.001
+    it_max = 1000
     
     solution, nb_iterations, historique = gradient_pas_optimal(x_0, tolerance, it_max)
     
@@ -639,8 +639,8 @@ def test_gradient_pas_optimal():
 
 def test_newton():
     x_0 = [10, 10, 1]  # (r_0, h_0, lambda_0)
-    tolerance = 0.0001
-    it_max = 1000
+    tolerance = 0.001
+    it_max = 100
     
     solution, nb_iterations, historique = newton(x_0, tolerance, it_max)
     
@@ -665,7 +665,7 @@ def test_newton():
 
 def test_quasi_newton():
     x_0 = [10, 10, 1]  # (r_0, h_0, lambda_0)
-    tolerance = 0.0001
+    tolerance = 0.001
     it_max = 500
     
     solution, nb_iterations, historique = quasi_newton(x_0, tolerance, it_max)
