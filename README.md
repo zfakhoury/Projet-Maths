@@ -3,9 +3,28 @@
 ## Auteurs
 
 - FAKHOURY Zouhair
-- PEIGNET Nathan`
+- PEIGNET Nathan
 - BILYK Tymofii
 - NGUYEN Manh Hung
+
+## Table de matières
+
+- [Description](#description)
+- [Dépendances](#dépendances)
+- [Installation et configuration](#installation-et-configuration)
+- [Sortie du programme](#sortie-du-programme)
+- [Strucutre du projet](#structure-du-projet)
+- [Fonctions implémentées](#fonctions-implémentées)
+  - [Calculs géométriques](#calculs-géométriques)
+  - [Fonctions d'optimisation](#fonctions-doptimisation)
+  - [Recherche linéaire](#recherche-linéaire)
+- [Algorithme d'optimisation](#fonctions-dalgorithme-doptimisation)
+  - [Gradient à pas fixe](#gradient-à-pas-fixe)
+  - [Gradient à pas optimal](#gradient-à-pas-optimal)
+  - [Newton](#newton)`
+  - [Quasi-Newton BFGS](#quasi-newton-bfgs)
+- [Fonctions de visualisation](#fonctions-de-visualisation)
+- [Fonctions de tests individuels des méthodes](#fonctions-de-tests-individuels-des-méthodes)
 
 ## Description
 
