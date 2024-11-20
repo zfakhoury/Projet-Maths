@@ -1,4 +1,13 @@
-# Projet-Maths
+# Optimisation numérique
+
+## Auteurs
+
+- FAKHOURY Zouhair
+- PEIGNET Nathan`
+- BILYK Tymofii
+- NGUYEN Manh Hung
+
+## Description
 
 Ce projet implémente différentes méthodes d'optimisation numérique pour trouver les dimensions optimales d'un cône sous contrainte de volume. Les méthodes implémentées sont :
 
