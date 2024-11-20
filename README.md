@@ -85,8 +85,6 @@ Le programme va :
 ### Recherche linéaire
 
 - `wolfe(x_k, d_k)` : Implémente la recherche linéaire avec les conditions de Wolfe pour trouver le pas optimal
-  - Utilise les paramètres $c_1=0.01$ et $c_2=0.99$
-  - Retourne le pas optimal qui satisfait les conditions de Wolfe
 
 ## Fonctions d'algorithme d'optimisation
 
